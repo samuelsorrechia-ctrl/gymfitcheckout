@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymFitCheckout - Sistema de Caixa para Loja Fitness</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* TODO O CSS ORIGINAL AQUI (mantenha todo o CSS anterior) */
+        /* ... */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- TODO O HTML ORIGINAL AQUI (mantenha todo o HTML anterior) -->
+        <!-- ... -->
+    </div>
+
+    <!-- Modal para adicionar/editar produto -->
+    <div class="modal" id="product-modal">
+        <!-- ... -->
+    </div>
+
+    <!-- Modal de finalização de venda -->
+    <div class="modal" id="sale-modal">
+        <!-- ... -->
+    </div>
+
+    <!-- NOVO: Modal de Configuração do GitHub -->
+    <div class="modal" id="github-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Configurar Armazenamento Online</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 20px;">
+                    <h4>Armazenamento Online (GitHub)</h4>
+                    <p>Configure para salvar seus dados na nuvem e acessar de qualquer dispositivo.</p>
+                    
+                    <div id="github-status" style="padding: 15px; background-color: #f8f9fa; border-radius: var(--border-radius); margin: 15px 0;">
+                        <p><strong>Status:</strong> <span id="status-text">Não configurado</span></p>
+                        <p><small>Última sincronização: <span id="last-sync">Nunca</span></small></p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="github-token">Token de Acesso do GitHub:</label>
+                    <input type="password" id="github-token" placeholder="Cole seu token do GitHub aqui">
+                    <small style="color: var(--gray-color); display: block; margin-top: 5px;">
+                        <i class="fas fa-info-circle"></i> 
+                        <a href="#" id="how-to-token">Como criar um token?</a>
+                    </small>
+                </div>
+                
+                <div id="token-instructions" style="display: none; padding: 15px; background-color: #fff3cd; border-radius: var(--border-radius); margin: 15px 0;">
+                    <h5><i class="fas fa-graduation-cap"></i> Como criar token:</h5>
+                    <ol style="margin-left: 20px;">
+                        <li>Acesse <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a></li>
+                        <li>Clique em <strong>"Generate new token"</strong> → <strong>"Generate new token (classic)"</strong></li>
+                        <li>Dê um nome (ex: "GymFitCheckout")</li>
+                        <li>Marque as permissões: <strong>✔ gist</strong> e <strong>✔ repo</strong></li>
+                        <li>Clique em <strong>"Generate token"</strong></li>
+                        <li><strong>COPIE O TOKEN</strong> (você só verá ele uma vez!)</li>
+                        <li>Cole o token no campo acima</li>
+                    </ol>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 30px;">
+                    <button class="btn btn-success" id="save-github-config">
+                        <i class="fas fa-save"></i> Salvar Configuração
+                    </button>
+                    <button class="btn btn-primary" id="test-connection">
+                        <i class="fas fa-plug"></i> Testar Conexão
+                    </button>
+                    <button class="btn btn-secondary close-modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>GymFitCheckout &copy; 2023 - Sistema de Caixa para Loja de Produtos Fitness</p>
+        <p>Armazenamento: <span id="storage-status">Local</span> | 
+           <a href="#" id="configure-storage" style="color: var(--primary-color); text-decoration: none;">
+               <i class="fas fa-cog"></i> Configurar
+           </a>
+        </p>
+    </footer>
+
+    <script>
+        // ============================================
+        // DADOS INICIAIS DO SISTEMA
+        // ============================================
+        let products = [
+            { id: 1, code: "PROD001", name: "Whey Protein 1kg", category: "suplementos", price: 89.90, cost: 60.00, stock: 25, minStock: 5, description: "Proteína em pó sabor chocolate" },
+            { id: 2, code: "PROD002", name: "Creatina 300g", category: "suplementos", price: 69.90, cost: 45.00, stock: 18, minStock: 5, description: "Creatina monohidratada pura" },
+            { id: 3, code: "PROD003", name: "Camiseta Dry Fit", category: "vestuario", price: 49.90, cost: 25.00, stock: 42, minStock: 10, description: "Camiseta de compressão dry fit" },
+            { id: 4, code: "PROD004", name: "Shorts de Academia", category: "vestuario", price: 59.90, cost: 30.00, stock: 36, minStock: 10, description: "Shorts de malha com bolso" },
+            { id: 5, code: "PROD005", name: "Garrafa Squeeze 750ml", category: "acessorios", price: 24.90, cost: 12.00, stock: 50, minStock: 15, description: "Garrafa para água com marcação" },
+            { id: 6, code: "PROD006", name: "Luvas de Levantamento", category: "acessorios", price: 39.90, cost: 20.00, stock: 28, minStock: 8, description: "Luvas para proteção nas mãos" },
+            { id: 7, code: "PROD007", name: "Barra de Proteína", category: "alimentos", price: 6.90, cost: 3.50, stock: 120, minStock: 30, description: "Barra proteica sabor chocolate" },
+            { id: 8, code: "PROD008", name: "BCAA em Cápsulas", category: "suplementos", price: 79.90, cost: 50.00, stock: 15, minStock: 5, description: "Aminoácidos de cadeia ramificada" }
+        ];
+
+        let sales = [
+            { id: 1001, date: "2023-10-05 09:30", customer: "Carlos Silva", total: 159.80, payment: "credit", items: [
+                { product: "Whey Protein 1kg", quantity: 1, price: 89.90 },
+                { product: "Creatina 300g", quantity: 1, price: 69.90 }
+            ]},
+            { id: 1002, date: "2023-10-05 11:15", customer: "Ana Souza", total: 109.80, payment: "pix", items: [
+                { product: "Camiseta Dry Fit", quantity: 2, price: 49.90 }
+            ]},
+            { id: 1003, date: "2023-10-04 14:20", customer: "Roberto Lima", total: 24.90, payment: "cash", items: [
+                { product: "Garrafa Squeeze 750ml", quantity: 1, price: 24.90 }
+            ]},
+            { id: 1004, date: "2023-10-04 16:45", customer: "Maria Oliveira", total: 146.70, payment: "debit", items: [
+                { product: "Shorts de Academia", quantity: 1, price: 59.90 },
+                { product: "Luvas de Levantamento", quantity: 1, price: 39.90 },
+                { product: "Barra de Proteína", quantity: 2, price: 6.90 }
+            ]}
+        ];
+
+        let cart = [];
+        let inventoryHistory = [
+            { date: "2023-10-05 08:00", product: "Whey Protein 1kg", type: "add", quantity: 10, user: "João Silva", reason: "Compra de fornecedor" },
+            { date: "2023-10-04 16:30", product: "Camiseta Dry Fit", type: "remove", quantity: 2, user: "João Silva", reason: "Venda" },
+            { date: "2023-10-03 10:15", product: "Barra de Proteína", type: "add", quantity: 50, user: "João Silva", reason: "Compra de fornecedor" },
+            { date: "2023-10-02 14:20", product: "Creatina 300g", type: "adjust", quantity: 5, user: "João Silva", reason: "Ajuste de inventário" }
+        ];
+
+        // ============================================
+        // FUNÇÕES UTILITÁRIAS
+        // ============================================
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ============================================
+        // SISTEMA DE ARMAZENAMENTO ONLINE (GitHub Gists)
+        // ============================================
+        const STORAGE_CONFIG = {
+            GITHUB_TOKEN: localStorage.getItem('github_token') || '',
+            GIST_ID: localStorage.getItem('gist_id') || '',
+            DATA_FILENAME: 'gymfitcheckout_data.json',
+            AUTO_SAVE_INTERVAL: 30000, // 30 segundos
+            LAST_SAVE_KEY: 'last_github_save'
+        };
+
+        // Configurar armazenamento online
+        function setupOnlineStorage() {
+            updateStorageStatus();
+            
+            // Verificar se já tem token configurado
+            if (STORAGE_CONFIG.GITHUB_TOKEN) {
+                checkGistExists();
+            } else {
+                // Mostrar prompt após 5 segundos
+                setTimeout(() => {
+                    if (!localStorage.getItem('github_prompt_shown')) {
+                        const setup = confirm(
+                            'Deseja configurar armazenamento online?\n\n' +
+                            '✅ Seus dados serão salvos na nuvem\n' +
+                            '✅ Acesse de qualquer dispositivo\n' +
+                            '✅ Backup automático\n\n' +
+                            'Clique em "Configurar" no rodapé para ativar.'
+                        );
+                        if (setup) {
+                            openGitHubConfig();
+                        }
+                        localStorage.setItem('github_prompt_shown', 'true');
+                    }
+                }, 5000);
+            }
+            
+            // Iniciar salvamento automático
+            startAutoSave();
+        }
+
+        // Atualizar status no rodapé
+        function updateStorageStatus() {
+            const statusElement = document.getElementById('storage-status');
+            if (STORAGE_CONFIG.GITHUB_TOKEN && STORAGE_CONFIG.GIST_ID) {
+                statusElement.textContent = 'Online (GitHub)';
+                statusElement.style.color = 'var(--success-color)';
+            } else {
+                statusElement.textContent = 'Local (apenas neste navegador)';
+                statusElement.style.color = 'var(--warning-color)';
+            }
+        }
+
+        // Verificar se o Gist existe
+        async function checkGistExists() {
+            if (!STORAGE_CONFIG.GITHUB_TOKEN) return false;
+            
+            if (!STORAGE_CONFIG.GIST_ID) {
+                // Criar novo Gist
+                return await createNewGist();
+            }
+            
+            try {
+                const response = await fetch(`https://api.github.com/gists/${STORAGE_CONFIG.GIST_ID}`, {
+                    headers: {
+                        'Authorization': `token ${STORAGE_CONFIG.GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('Gist encontrado!');
+                    await loadDataFromGitHub();
+                    return true;
+                } else {
+                    console.log('Gist não encontrado, criando novo...');
+                    return await createNewGist();
+                }
+            } catch (error) {
+                console.error('Erro ao verificar Gist:', error);
+                return false;
+            }
+        }
+
+        // Criar novo Gist
+        async function createNewGist() {
+            if (!STORAGE_CONFIG.GITHUB_TOKEN) return false;
+            
+            const appData = {
+                products: products,
+                sales: sales,
+                inventoryHistory: inventoryHistory,
+                cart: cart,
+                created: new Date().toISOString(),
+                app: 'GymFitCheckout',
+                version: '2.0'
+            };
+            
+            try {
+                const response = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${STORAGE_CONFIG.GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        description: 'Dados do Sistema GymFitCheckout',
+                        public: false,
+                        files: {
+                            [STORAGE_CONFIG.DATA_FILENAME]: {
+                                content: JSON.stringify(appData, null, 2)
+                            }
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                STORAGE_CONFIG.GIST_ID = data.id;
+                localStorage.setItem('gist_id', data.id);
+                
+                console.log('Novo Gist criado:', data.id);
+                updateStorageStatus();
+                showNotification('Armazenamento online configurado com sucesso!', 'success');
+                return true;
+            } catch (error) {
+                console.error('Erro ao criar Gist:', error);
+                showNotification('Erro ao configurar armazenamento online. Verifique o token.', 'error');
+                return false;
+            }
+        }
+
+        // Salvar dados no GitHub
+        async function saveDataToGitHub() {
+            if (!STORAGE_CONFIG.GITHUB_TOKEN || !STORAGE_CONFIG.GIST_ID) {
+                saveDataToLocalStorage();
+                return false;
+            }
+            
+            const appData = {
+                products: products,
+                sales: sales,
+                inventoryHistory: inventoryHistory,
+                cart: cart,
+                lastUpdate: new Date().toISOString(),
+                totalProducts: products.length,
+                totalSales: sales.length
+            };
+            
+            try {
+                const response = await fetch(`https://api.github.com/gists/${STORAGE_CONFIG.GIST_ID}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${STORAGE_CONFIG.GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            [STORAGE_CONFIG.DATA_FILENAME]: {
+                                content: JSON.stringify(appData, null, 2)
+                            }
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    localStorage.setItem(STORAGE_CONFIG.LAST_SAVE_KEY, new Date().toISOString());
+                    console.log('✅ Dados salvos no GitHub!');
+                    
+                    // Também salva localmente como backup
+                    saveDataToLocalStorage();
+                    
+                    // Atualizar UI se modal estiver aberto
+                    updateGitHubStatusUI();
+                    
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao salvar no GitHub:', error);
+                // Fallback para armazenamento local
+                saveDataToLocalStorage();
+                return false;
+            }
+        }
+
+        // Carregar dados do GitHub
+        async function loadDataFromGitHub() {
+            if (!STORAGE_CONFIG.GITHUB_TOKEN || !STORAGE_CONFIG.GIST_ID) {
+                return loadDataFromLocalStorage();
+            }
+            
+            try {
+                const response = await fetch(`https://api.github.com/gists/${STORAGE_CONFIG.GIST_ID}`, {
+                    headers: {
+                        'Authorization': `token ${STORAGE_CONFIG.GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const fileContent = data.files[STORAGE_CONFIG.DATA_FILENAME].content;
+                const loadedData = JSON.parse(fileContent);
+                
+                // Atualizar dados globais
+                if (loadedData.products && loadedData.products.length > 0) {
+                    products = loadedData.products;
+                }
+                if (loadedData.sales && loadedData.sales.length > 0) {
+                    sales = loadedData.sales;
+                }
+                if (loadedData.inventoryHistory && loadedData.inventoryHistory.length > 0) {
+                    inventoryHistory = loadedData.inventoryHistory;
+                }
+                if (loadedData.cart && loadedData.cart.length > 0) {
+                    cart = loadedData.cart;
+                }
+                
+                console.log('✅ Dados carregados do GitHub!');
+                showNotification('Dados sincronizados da nuvem', 'success');
+                
+                // Atualizar UI
+                updateGitHubStatusUI();
+                return true;
+            } catch (error) {
+                console.error('❌ Erro ao carregar do GitHub:', error);
+                return loadDataFromLocalStorage();
+            }
+        }
+
+        // Salvar dados localmente
+        function saveDataToLocalStorage() {
+            const appData = {
+                products: products,
+                sales: sales,
+                inventoryHistory: inventoryHistory,
+                cart: cart,
+                lastUpdate: new Date().toISOString(),
+                storage: 'local'
+            };
+            
+            localStorage.setItem('gymfitcheckout_data', JSON.stringify(appData));
+            console.log('💾 Dados salvos localmente');
+        }
+
+        // Carregar dados localmente
+        function loadDataFromLocalStorage() {
+            const savedData = localStorage.getItem('gymfitcheckout_data');
+            if (savedData) {
+                try {
+                    const loadedData = JSON.parse(savedData);
+                    
+                    if (loadedData.products && loadedData.products.length > 0) {
+                        products = loadedData.products;
+                    }
+                    if (loadedData.sales && loadedData.sales.length > 0) {
+                        sales = loadedData.sales;
+                    }
+                    if (loadedData.inventoryHistory && loadedData.inventoryHistory.length > 0) {
+                        inventoryHistory = loadedData.inventoryHistory;
+                    }
+                    if (loadedData.cart && loadedData.cart.length > 0) {
+                        cart = loadedData.cart;
+                    }
+                    
+                    console.log('💾 Dados carregados localmente');
+                    return true;
+                } catch (e) {
+                    console.error('Erro ao carregar dados locais:', e);
+                }
+            }
+            return false;
+        }
+
+        // Sistema híbrido de salvamento
+        async function saveData() {
+            if (STORAGE_CONFIG.GITHUB_TOKEN && STORAGE_CONFIG.GIST_ID) {
+                return await saveDataToGitHub();
+            } else {
+                saveDataToLocalStorage();
+                return true;
+            }
+        }
+
+        async function loadData() {
+            if (STORAGE_CONFIG.GITHUB_TOKEN && STORAGE_CONFIG.GIST_ID) {
+                const success = await loadDataFromGitHub();
+                if (!success) {
+                    loadDataFromLocalStorage();
+                }
+            } else {
+                loadDataFromLocalStorage();
+            }
+        }
+
+        // Iniciar salvamento automático
+        function startAutoSave() {
+            // Salvar a cada 30 segundos se houver mudanças
+            setInterval(async () => {
+                if (STORAGE_CONFIG.GITHUB_TOKEN && STORAGE_CONFIG.GIST_ID) {
+                    await saveDataToGitHub();
+                } else {
+                    saveDataToLocalStorage();
+                }
+            }, STORAGE_CONFIG.AUTO_SAVE_INTERVAL);
+            
+            // Salvar quando a página for fechada
+            window.addEventListener('beforeunload', () => {
+                saveData();
+            });
+        }
+
+        // Testar conexão com GitHub
+        async function testGitHubConnection() {
+            const token = document.getElementById('github-token').value || STORAGE_CONFIG.GITHUB_TOKEN;
+            
+            if (!token) {
+                showNotification('Digite um token do GitHub', 'warning');
+                return false;
+            }
+            
+            try {
+                const response = await fetch('https://api.github.com/user', {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    showNotification(`Conexão OK! Usuário: ${userData.login}`, 'success');
+                    return true;
+                } else {
+                    showNotification('Token inválido ou sem permissões', 'error');
+                    return false;
+                }
+            } catch (error) {
+                showNotification('Erro de conexão: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        // Atualizar UI do status do GitHub
+        function updateGitHubStatusUI() {
+            const statusText = document.getElementById('status-text');
+            const lastSync = document.getElementById('last-sync');
+            
+            if (STORAGE_CONFIG.GITHUB_TOKEN && STORAGE_CONFIG.GIST_ID) {
+                statusText.textContent = 'Conectado';
+                statusText.style.color = 'var(--success-color)';
+                
+                const lastSave = localStorage.getItem(STORAGE_CONFIG.LAST_SAVE_KEY);
+                if (lastSave) {
+                    const date = new Date(lastSave);
+                    lastSync.textContent = date.toLocaleTimeString('pt-BR');
+                }
+            } else {
+                statusText.textContent = 'Não configurado';
+                statusText.style.color = 'var(--warning-color)';
+                lastSync.textContent = 'Nunca';
+            }
+        }
+
+        // Mostrar notificação
+        function showNotification(message, type = 'info') {
+            // Criar elemento de notificação
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: var(--border-radius);
+                color: white;
+                font-weight: 600;
+                z-index: 10000;
+                box-shadow: var(--box-shadow);
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            // Cor baseada no tipo
+            if (type === 'success') {
+                notification.style.backgroundColor = 'var(--success-color)';
+            } else if (type === 'error') {
+                notification.style.backgroundColor = 'var(--danger-color)';
+            } else if (type === 'warning') {
+                notification.style.backgroundColor = 'var(--warning-color)';
+            } else {
+                notification.style.backgroundColor = 'var(--primary-color)';
+            }
+            
+            // Adicionar ao documento
+            document.body.appendChild(notification);
+            
+            // Remover após 3 segundos
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Adicionar animações CSS para notificações
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ============================================
+        // EVENT LISTENERS para GitHub Storage
+        // ============================================
+        function setupStorageEventListeners() {
+            // Botão de configurar armazenamento
+            document.getElementById('configure-storage').addEventListener('click', function(e) {
+                e.preventDefault();
+                openGitHubConfig();
+            });
+            
+            // Link "Como criar token"
+            document.getElementById('how-to-token').addEventListener('click', function(e) {
+                e.preventDefault();
+                const instructions = document.getElementById('token-instructions');
+                instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
+            });
+            
+            // Botão salvar configuração
+            document.getElementById('save-github-config').addEventListener('click', async function() {
+                const token = document.getElementById('github-token').value.trim();
+                
+                if (!token) {
+                    showNotification('Digite um token do GitHub', 'warning');
+                    return;
+                }
+                
+                // Testar token primeiro
+                const isValid = await testGitHubConnection();
+                if (!isValid) return;
+                
+                // Salvar token
+                STORAGE_CONFIG.GITHUB_TOKEN = token;
+                localStorage.setItem('github_token', token);
+                
+                // Criar/verificar Gist
+                const success = await checkGistExists();
+                if (success) {
+                    showNotification('Configuração salva com sucesso!', 'success');
+                    updateStorageStatus();
+                    setTimeout(() => {
+                        closeAllModals();
+                    }, 1500);
+                }
+            });
+            
+            // Botão testar conexão
+            document.getElementById('test-connection').addEventListener('click', testGitHubConnection);
+            
+            // Botão de sincronizar manual (adicionar no Dashboard)
+            const syncButton = document.createElement('button');
+            syncButton.className = 'btn btn-primary';
+            syncButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sincronizar';
+            syncButton.id = 'manual-sync';
+            syncButton.style.marginLeft = '10px';
+            
+            syncButton.addEventListener('click', async function() {
+                syncButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
+                syncButton.disabled = true;
+                
+                await saveData();
+                await loadData();
+                
+                // Atualizar UI
+                loadDashboardData();
+                loadProductsForSale();
+                loadProductsTable();
+                
+                syncButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sincronizado!';
+                setTimeout(() => {
+                    syncButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sincronizar';
+                    syncButton.disabled = false;
+                }, 2000);
+                
+                showNotification('Dados sincronizados com sucesso!', 'success');
+            });
+            
+            // Adicionar botão ao Dashboard
+            document.getElementById('dashboard').querySelector('.section-title').appendChild(syncButton);
+        }
+
+        // Abrir modal de configuração do GitHub
+        function openGitHubConfig() {
+            const modal = document.getElementById('github-modal');
+            modal.classList.add('active');
+            
+            // Preencher token se existir
+            if (STORAGE_CONFIG.GITHUB_TOKEN) {
+                document.getElementById('github-token').value = STORAGE_CONFIG.GITHUB_TOKEN;
+            }
+            
+            updateGitHubStatusUI();
+        }
+
+        // ============================================
+        // FUNÇÕES ORIGINAIS MODIFICADAS
+        // ============================================
+        // Modificar funções originais para salvar dados automaticamente
+        const originalFunctions = {
+            addProduct: null,
+            editProduct: null,
+            deleteProduct: null,
+            addToCart: null,
+            updateQuantity: null,
+            removeFromCart: null,
+            finalizeSale: null,
+            saveInventoryMovement: null
+        };
+
+        // Sobrescrever funções para salvar automaticamente
+        function wrapWithAutoSave(originalFunction) {
+            return async function(...args) {
+                const result = originalFunction.apply(this, args);
+                
+                // Salvar dados após a operação
+                setTimeout(async () => {
+                    await saveData();
+                }, 100);
+                
+                return result;
+            };
+        }
+
+        // Aplicar wrappers após as funções serem definidas
+        function applyAutoSaveWrappers() {
+            // Aguardar definição das funções
+            setTimeout(() => {
+                if (typeof addToCart === 'function') {
+                    addToCart = wrapWithAutoSave(addToCart);
+                }
+                if (typeof updateQuantity === 'function') {
+                    updateQuantity = wrapWithAutoSave(updateQuantity);
+                }
+                if (typeof removeFromCart === 'function') {
+                    removeFromCart = wrapWithAutoSave(removeFromCart);
+                }
+                if (typeof finalizeSale === 'function') {
+                    finalizeSale = wrapWithAutoSave(finalizeSale);
+                }
+                if (typeof saveInventoryMovement === 'function') {
+                    saveInventoryMovement = wrapWithAutoSave(saveInventoryMovement);
+                }
+            }, 1000);
+        }
+
+        // ============================================
+        // INICIALIZAÇÃO DO SISTEMA
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Iniciando GymFitCheckout...');
+            
+            // 1. Carregar dados
+            await loadData();
+            
+            // 2. Inicializar funções originais
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            // 3. Configurar navegação por abas
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    
+                    // Ativar aba clicada
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Mostrar conteúdo correspondente
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === tabId) {
+                            content.classList.add('active');
+                        }
+                    });
+                    
+                    // Carregar dados específicos da aba
+                    if (tabId === 'sales') {
+                        loadProductsForSale();
+                        updateCart();
+                    } else if (tabId === 'products') {
+                        loadProductsTable();
+                    } else if (tabId === 'inventory') {
+                        loadInventoryProducts();
+                        loadInventoryHistory();
+                    } else if (tabId === 'dashboard') {
+                        loadDashboardData();
+                    }
+                });
+            });
+            
+            // 4. Configurar sistema de armazenamento online
+            setupOnlineStorage();
+            setupStorageEventListeners();
+            applyAutoSaveWrappers();
+            
+            // 5. Carregar dados iniciais da UI
+            loadDashboardData();
+            loadProductsForSale();
+            loadProductsTable();
+            loadInventoryProducts();
+            loadInventoryHistory();
+            
+            console.log('✅ Sistema inicializado com sucesso!');
+            
+            // Mostrar mensagem de boas-vindas
+            setTimeout(() => {
+                if (STORAGE_CONFIG.GITHUB_TOKEN) {
+                    showNotification('Sistema online ativado! Dados salvos na nuvem.', 'success');
+                } else {
+                    showNotification('Sistema pronto! Configure armazenamento online no rodapé.', 'info');
+                }
+            }, 1000);
+        });
+
+        // ============================================
+        // FUNÇÕES ORIGINAIS DO SISTEMA (mantenha todas elas)
+        // ============================================
+        // Atualizar relógio
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('pt-BR');
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+
+        // Carregar dados do dashboard
+        function loadDashboardData() {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Carregar produtos para venda
+        function loadProductsForSale() {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Adicionar produto ao carrinho
+        function addToCart(productId) {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Atualizar carrinho
+        function updateCart() {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Atualizar quantidade do item no carrinho
+        function updateQuantity(productId, change) {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Remover item do carrinho
+        function removeFromCart(productId) {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Carregar tabela de produtos
+        function loadProductsTable() {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Carregar produtos para controle de estoque
+        function loadInventoryProducts() {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Carregar histórico de movimentação de estoque
+        function loadInventoryHistory() {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Modal para adicionar/editar produto
+        const productModal = document.getElementById('product-modal');
+        const productForm = document.getElementById('product-form');
+        const addProductBtn = document.getElementById('add-product');
+        const closeModalBtns = document.querySelectorAll('.close-modal');
+        
+        if (addProductBtn) {
+            addProductBtn.addEventListener('click', () => {
+                document.getElementById('product-form').reset();
+                document.querySelector('#product-modal .modal-title').textContent = 'Adicionar Produto';
+                productModal.classList.add('active');
+            });
+        }
+        
+        if (closeModalBtns.length > 0) {
+            closeModalBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.modal').forEach(modal => {
+                        modal.classList.remove('active');
+                    });
+                });
+            });
+        }
+        
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+        
+        // Salvar produto
+        if (productForm) {
+            productForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Gerar ID único
+                const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+                
+                // Obter valores do formulário
+                const newProduct = {
+                    id: newId,
+                    code: document.getElementById('product-code').value,
+                    name: document.getElementById('product-name').value,
+                    category: document.getElementById('product-category').value,
+                    price: parseFloat(document.getElementById('product-price').value),
+                    cost: parseFloat(document.getElementById('product-cost').value) || 0,
+                    stock: parseInt(document.getElementById('product-stock').value),
+                    minStock: 5, // Valor padrão
+                    description: document.getElementById('product-description').value
+                };
+                
+                // Adicionar produto
+                products.push(newProduct);
+                
+                // Salvar dados
+                await saveData();
+                
+                // Fechar modal
+                productModal.classList.remove('active');
+                
+                // Recarregar tabela de produtos
+                loadProductsTable();
+                loadProductsForSale();
+                loadInventoryProducts();
+                updateDashboardData();
+                
+                showNotification('Produto cadastrado com sucesso!', 'success');
+            });
+        }
+
+        // Editar produto
+        function editProduct(productId) {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Excluir produto
+        function deleteProduct(productId) {
+            // ... (mantenha todo o código original desta função)
+        }
+
+        // Salvar movimentação de estoque
+        if (document.getElementById('save-inventory')) {
+            document.getElementById('save-inventory').addEventListener('click', async () => {
+                // ... (mantenha todo o código original desta função)
+                // Adicione no final: await saveData();
+            });
+        }
+
+        // Finalizar venda
+        if (document.getElementById('finalize-sale')) {
+            document.getElementById('finalize-sale').addEventListener('click', async () => {
+                // ... (mantenha todo o código original desta função)
+                // Adicione no final: await saveData();
+            });
+        }
+
+        // Aplicar desconto
+        if (document.getElementById('apply-discount')) {
+            document.getElementById('apply-discount').addEventListener('click', () => {
+                // ... (mantenha todo o código original desta função)
+            });
+        }
+
+        // Cancelar venda
+        if (document.getElementById('cancel-sale')) {
+            document.getElementById('cancel-sale').addEventListener('click', () => {
+                // ... (mantenha todo o código original desta função)
+            });
+        }
+
+        // Imprimir recibo
+        if (document.getElementById('print-receipt')) {
+            document.getElementById('print-receipt').addEventListener('click', () => {
+                // ... (mantenha todo o código original desta função)
+            });
+        }
+
+        // Função auxiliar para fechar todos os modals
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+
+        // Função para atualizar dashboard (se necessário)
+        function updateDashboardData() {
+            // Recalcular e atualizar dashboard
+            if (document.getElementById('dashboard').classList.contains('active')) {
+                loadDashboardData();
+            }
+        }
+    </script>
+</body>
+</html>
